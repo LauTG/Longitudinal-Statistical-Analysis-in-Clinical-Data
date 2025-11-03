@@ -15,7 +15,7 @@
 - Model diagnostics and effect summaries with confidence intervals.
 
 ## R Packages
-`Hmisc`,`ggeffects`, `ggfortify`, `ggplot2`, `ggprism`, `ggpubr`, `ggrepel`, `ggsci`, `gridExtra`, `kableExtra`, `patchwork`,`tidyverse`,`nlmeU`, `lattice`, 'reshape`, `nlme` , `emmeans`, `rcompanion`, `pgirmess`
+`Hmisc`,`ggeffects`, `ggfortify`, `ggplot2`, `ggprism`, `ggpubr`, `ggrepel`, `ggsci`, `gridExtra`, `kableExtra`, `patchwork`,`tidyverse`,`nlmeU`, `lattice`, `reshape`, `nlme` , `emmeans`, `rcompanion`, `pgirmess`
 
 ## Reproducibility Notes
 - Code chunks remain unmodified; only narrative text and headings were anonymized.

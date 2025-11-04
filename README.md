@@ -1,22 +1,36 @@
 # Longitudinal Statistical Analysis
 
-**Goal.** Technical documentation of a longitudinal analysis in anonymized clinical data. This repository includes an anonymized RMarkdown report; all narrative references to specific diseases, drugs, centers, or unpublished outcomes have been removed. Methods and code structure are preserved for reproducibility.
+![Made with RStudio](https://img.shields.io/badge/Made%20with-RStudio-blue?logo=rstudio)
+
+This repository contains the **statistical report** of an anonymized longitudinal analysis conducted on clinical data.  
+All references that could identify the study, institution, cohort, or specific diagnosis—as well as any unpublished conclusions—have been removed or generalized. Methods and code structure are preserved to ensure reproducibility.
+
+## Scope
+
+- **Objective:** Technical documentation and comparative statistical evaluation of longitudinal data collected at multiple timepoints.  
+- **Audience:** Scientific and technical teams involved in clinical data analysis, reporting, and visualization.
 
 ## Workflow
-- Data preparation (import, cleaning, recoding, date handling).
-- Exploratory summaries and visualizations.
-- Longitudinal/statistical modeling as appropriate (e.g., mixed-effects for repeated measures; survival/time-to-event if present).
-- Reproducible reporting with RMarkdown.
 
-## Statistical Methods
-- Descriptives: median [IQR], counts (%), stratifications.
-- Between/within-group comparisons: parametric or non-parametric tests as appropriate.
-- Visualization of distributions, trends, and paired changes
-- Model diagnostics and effect summaries with confidence intervals.
+1. **Data processing and cleaning:**
+   - Import, transformation, and recoding of tabular datasets from multiple sources.  
+   - Conversion between **cross-sectional (wide)** and **longitudinal (long)** data structures to enable time-based and subject-level analyses.  
+   - Management of missing values, date/time variables, and data integrity checks across timepoints.  
+   - Workflow implemented primarily with `tidyverse` (`dplyr`, `tidyr`, `lubridate`, `stringr`) for data wrangling, complemented by `reshape`, `Hmisc`, and `nlmeU` for dataset preparation and consistency validation.  
 
-## R Packages
-`Hmisc`,`ggeffects`, `ggfortify`, `ggplot2`, `ggprism`, `ggpubr`, `ggrepel`, `ggsci`, `gridExtra`, `kableExtra`, `patchwork`,`tidyverse`,`nlmeU`, `lattice`, `reshape`, `nlme` , `emmeans`, `rcompanion`, `pgirmess`
+2. **Descriptive analysis:**
+   - Summary statistics: median [IQR], counts (%), and stratified summaries.  
+   - Exploratory visualizations of distributions, changes, and trends over time.
 
-## Reproducibility Notes
-- Code chunks remain unmodified; only narrative text and headings were anonymized.
-- Sections titled **Results/Discussion/Conclusions/Summary** were removed to avoid disclosure of unpublished findings.
+3. **Comparative analysis:**
+   - **Paired tests:** parametric (`t.test`) and non-parametric (`wilcox.test`) for within-subject comparisons.  
+   - **Group comparisons:** ANOVA / Kruskal–Wallis tests for continuous variables; Chi-square / Fisher’s exact tests for categorical data.  
+   - **Effect size estimation** and graphical representation of differences.
+
+4. **Visualization and reporting:**
+   - Publication-ready plots and layouts using `ggplot2`, `ggprism`, `ggpubr`, and `patchwork`.  
+   - Tables and summaries created with `kableExtra`.  
+   - Fully reproducible document generation via **RMarkdown**.
+
+## Main Packages
+`Hmisc`, `ggeffects`, `ggfortify`, `ggplot2`, `ggprism`, `ggpubr`, `ggrepel`, `ggsci`, `gridExtra`, `kableExtra`, `patchwork`, `tidyverse`, `nlmeU`, `lattice`, `reshape`, `nlme`, `emmeans`, `rcompanion`, `pgirmess`

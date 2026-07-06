@@ -59,7 +59,7 @@ library(pgirmess)
 
 ```{r}
 rm(list=ls())
-data=read.csv('anifro_6m2.csv')
+data=read.csv('data.csv')
 ```
 
 ```{r,results='hide'}
@@ -69,33 +69,30 @@ str(data)
 
 
 ```{r, results='hide'}
-#### MAKING DATA (sin incluir variables de análisis de seguridad) ####
+#### MAKING DATA  ####
 
-## Hago la suma de FAMEsc en el seguimiento en el df original para mayor facilidad
+
 data$FAMEsc_total_3m<-data$fame_sc_seg___1+data$fame_sc_seg___2+data$fame_sc_seg___3+data$fame_sc_seg___4+data$fame_sc_seg___5+
   data$fame_sc_seg___6+data$fame_sc_seg___7+data$fame_sc_seg___8
 
-## si en brote_seg (variable si/no que abre desplegable para numero de brotes) hay un 0 poner 0 en numero_brotes_seg
 data$numero_brotes_seg <- ifelse(data$brote_seg == 0, 0, data$numero_brotes_seg)
 
-## cambiar character a numeric
 data$dosis_cortis<-as.numeric(data$dosis_cortis)
 data$sledas<-as.numeric(data$sledas)
 data$numero_brotes<-as.numeric(data$numero_brotes)
 data$numero_fame_sc_previos<-as.numeric(data$numero_fame_sc_previos)
 
-## Asigno un 0 (=No) al tiempo baseline de las variables respuesta medico, 20, 50 y serologica
+
 respuestas<-c("respuesta_criterio_medico","respuesta_20","respuesta_50","respuesta_serologica")
 for (i in respuestas){
   data[[i]] <- ifelse(data$redcap_event_name == "visita_basal_arm_1", 0, data[[i]])
 }
 
-## Crear un nuevo df con las variables que si estan en formato long en el df original + añadir las que no y fusionarlas 
 
 long <- data %>%
   select(
-    id,                      # Mantener el nombre original
-    Event=redcap_event_name,       # Renombrar "nuevo nombre"="variable original" 
+    id,                      
+    Event=redcap_event_name,       
     anti_dsDNA=valor_antids_dna,
     CRP=pcr,
     sledai_basal,
@@ -106,7 +103,7 @@ long <- data %>%
     Response20=respuesta_20,
     Response50=respuesta_50,
     Serological_response=respuesta_serologica,
-    remision_doris2021,       #a partir de aqui no estan en formato long, estan partidas en baseline/3+6m
+    remision_doris2021,      
     remision_doris2021_seg,
     lldas,
     lldas_seg,
@@ -119,7 +116,7 @@ long <- data %>%
     dosis_cortis,
     dosis_cortis_seg
     ) %>%
-  mutate(                    # Fusionar variables con info en dos columnas en una
+  mutate(                   
     SLEDAI=coalesce(sledai_basal,sledai_calculado),
     DORIS=coalesce(remision_doris2021,remision_doris2021_seg),
     LLDAS=coalesce(lldas,lldas_seg),
@@ -160,28 +157,28 @@ Numero de pacientes en cada tiempo:
 
 ```{r}
 long %>%
-  group_by(Event) %>%                  # Agrupar por tiempo
+  group_by(Event) %>%                 
   summarise(
-    num_patients = n_distinct(id)     # Contar pacientes únicos por tiempo
+    num_patients = n_distinct(id)     
   )
 ```
 
 <br>
 
-Nos quedamos solo con los pacientes que tengan los 3 tiempos y contamos los NA por cada variable 
+
 
 ```{r}
 long3t <- long %>%
-  group_by(id) %>%                              # Agrupar por paciente (id)
-  filter(n_distinct(Event) == 3) %>%             # Mantener solo pacientes con 3 tiempos
-  ungroup() %>%                                  # Desagrupar para un data frame limpio
+  group_by(id) %>%                             
+  filter(n_distinct(Event) == 3) %>%             
+  ungroup() %>%                                  
   as.data.frame(.)                               
 ```
 
 ```{r}
 long3t %>%
-  group_by(Event) %>%                             # Agrupar por el tiempo (baseline, 3m, 6m)
-  summarise(across(-id, ~ sum(is.na(.)), .names = "{col}")) #Contar los NAs de todas menos de id
+  group_by(Event) %>%                             
+  summarise(across(-id, ~ sum(is.na(.)), .names = "{col}")) 
 ```
 
 <br>
@@ -203,10 +200,10 @@ numericas<-names(Filter(function(x) is.numeric(x) || is.integer(x), long3t))
 numericas <- c(numericas, "Event")
 
 ggplot(melt(long3t[, numericas]), aes(x = value, fill = as.factor(Event))) +
-  geom_histogram(aes(y = ..density..), color = "black", bins = 30, alpha = 0.5, position = "identity") +  # Histogramas superpuestos
-  geom_density(color = "black", size = 0.7, aes(group = Event)) +  # Densidad para cada Event
-  facet_wrap(~variable, scales = "free") +  # Facetas por variable, sin que se repita por Event
-  scale_fill_manual(values = c("red", "blue", "green")) +  # Colores para cada Event
+  geom_histogram(aes(y = ..density..), color = "black", bins = 30, alpha = 0.5, position = "identity") +  
+  geom_density(color = "black", size = 0.7, aes(group = Event)) +  
+  facet_wrap(~variable, scales = "free") + 
+  scale_fill_manual(values = c("red", "blue", "green")) + 
   labs(x = "", y = "Density", fill = "Evento")+
   theme(legend.position = "top")
 
@@ -226,10 +223,10 @@ ggplot(melt(long3t[, numericas]), aes(x = value, fill = as.factor(Event))) +
 <br>
 
 ```{r}
-wide3t <- long3t %>%           #Convertir el df en formato long a formato wide
+wide3t <- long3t %>%           
   pivot_wider(
-    names_from = Event,             # Las nuevas columnas se basarán en los valores de 'Event'
-    values_from = -c(id, Event)  # Excluye 'id' y 'Event' de las variables a pivotar
+    names_from = Event,            
+    values_from = -c(id, Event)  
   )
 ```
 
@@ -238,15 +235,10 @@ wide3t <- long3t %>%           #Convertir el df en formato long a formato wide
 # Definir función que calcule estadísticos para los 3 tiempos en variables continuas en df wide
 continuas_stats <- function(df, id_col, time_var1, time_var2, time_var3) {
   
-  # Asegurarse de que las columnas estén en el formato correcto
+ 
   df %>%
-    # 1. Seleccionar el ID y las 3 variables de tiempo
     select(!!id_col, !!time_var1, !!time_var2, !!time_var3) %>%
-    
-    # 2. Eliminar filas con NA en alguna de las 3 variables de tiempo
     filter(complete.cases(.)) %>%
-    
-    # 3. Calcular los estadísticos de cada variable de tiempo
     summarise(
       N_1 = sum(!is.na(!!sym(time_var1))),
       Mean_1 = mean(!!sym(time_var1)),
@@ -267,18 +259,12 @@ continuas_stats <- function(df, id_col, time_var1, time_var2, time_var3) {
       IQR_3 = IQR(!!sym(time_var3))
     ) %>%
     
-    # 4. Pivotear los resultados para que los tiempos sean columnas y los estadísticos sean filas
     pivot_longer(cols = everything(), 
                  names_to = c("Statistic", "Time"), 
                  names_pattern = "(.*)_(.*)") %>%
     
-    # 5. Reorganizar el formato para que las filas sean los estadísticos y las columnas sean los tiempos
     pivot_wider(names_from = Time, values_from = value) %>%
-    
-    # 6. Asegurarse de que los nombres de las columnas sean limpios y significativos
     rename(Baseline = `1`, `3months` = `2`, `6months` = `3`) %>%
-    
-    # 7. Redondear los valores numéricos a 2 decimales
     mutate(across(where(is.numeric), round, digits = 1)) 
 }
 
@@ -299,8 +285,7 @@ continuas_stats(wide3t, "id", "SLEDAI_Baseline", "SLEDAI_3 months", "SLEDAI_6 mo
 ```
 
 <br>
-
-La variable SLEDAI presenta violaciones de los supuestos de normalidad y homocedasticidad por lo que se utilizará la versión no paramétrica del ANOVA de medidas repetidas, el Test de Friedman. Cuando el test de Friedman es significativo quiere decir que hay diferencias entre los tiempos, pero no especifica entre cuales. Por eso, a continuación se realiza una prueba post-hoc que utiliza la correccion de Holm para el ajuste de los p-valores en comparaciones múltiples y establece entre que tiempo se observan las diferencias. 
+ 
 
 ```{r}
 temp<- wide3t %>%
@@ -334,7 +319,7 @@ ggpaired(temp, x = "Event", y = "SLEDAI",id="id",
 ```
 
 
-#### condition-DAS
+#### SLE-DAS
 
 <br>
 
@@ -342,9 +327,7 @@ ggpaired(temp, x = "Event", y = "SLEDAI",id="id",
 continuas_stats(wide3t, "id", "SLEDAS_Baseline", "SLEDAS_3 months", "SLEDAS_6 months")
 ```
 
-<br>
 
-Lo mismo, se utiliza Test de Friedman y corrección de Holm.
 
 <br>
 
@@ -357,7 +340,6 @@ temp<- wide3t %>%
     names_to = "Event",  # Nueva columna con los nombres originales
     values_to = "SLEDAS"  # Nueva columna con los valores
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
   mutate(Event = case_when(
     Event == "SLEDAS_Baseline" ~ "Baseline",
     Event == "SLEDAS_3 months" ~ "3 months",
@@ -388,9 +370,6 @@ ggpaired(temp, x = "Event", y = "SLEDAS",id="id",
 continuas_stats(wide3t, "id", "PGA_Baseline", "PGA_3 months", "PGA_6 months")
 ```
 
-<br>
-
-Lo mismo, se utiliza Test de Friedman y corrección de Holm.
 
 <br>
 
@@ -403,7 +382,6 @@ temp<- wide3t %>%
     names_to = "Event",  # Nueva columna con los nombres originales
     values_to = "PGA"  # Nueva columna con los valores
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
   mutate(Event = case_when(
     Event == "PGA_Baseline" ~ "Baseline",
     Event == "PGA_3 months" ~ "3 months",
@@ -429,9 +407,7 @@ ggpaired(temp, x = "Event", y = "PGA",id="id",
 
 #### SLICC
 
-<br>
 
-En el SLICC es un caso diferente ya que solo hay mediciones en los tiempos baseline y 6 meses.
 
 <br>
 
@@ -449,18 +425,12 @@ temp<-data %>%
 ```
 
 ```{r}
-# Definir función que calcule estadísticos para dos tiempos en variables continuas en df wide
+
 continuas_stats_two <- function(df, id_col, time_var1, time_var2) {
   
-  # Asegurarse de que las columnas estén en el formato correcto
   df %>%
-    # 1. Seleccionar el ID y las 2 variables de tiempo
     select(!!id_col, !!time_var1, !!time_var2) %>%
-    
-    # 2. Eliminar filas con NA en alguna de las 2 variables de tiempo
     filter(complete.cases(.)) %>%
-    
-    # 3. Calcular los estadísticos de cada variable de tiempo
     summarise(
       N_1 = sum(!is.na(!!sym(time_var1))),
       Mean_1 = mean(!!sym(time_var1)),
@@ -475,18 +445,11 @@ continuas_stats_two <- function(df, id_col, time_var1, time_var2) {
       IQR_2 = IQR(!!sym(time_var2))
     ) %>%
     
-    # 4. Pivotear los resultados para que los tiempos sean columnas y los estadísticos sean filas
     pivot_longer(cols = everything(), 
                  names_to = c("Statistic", "Time"), 
                  names_pattern = "(.*)_(.*)") %>%
-    
-    # 5. Reorganizar el formato para que las filas sean los estadísticos y las columnas sean los tiempos
     pivot_wider(names_from = Time, values_from = value) %>%
-    
-    # 6. Asegurarse de que los nombres de las columnas sean limpios y significativos
     rename(Baseline = `1`, `6 months` = `2`) %>%
-    
-    # 7. Redondear los valores numéricos a 2 decimales (excepto "N")
     mutate(across(where(is.numeric), round, digits = 1))
 }
 
@@ -502,16 +465,14 @@ continuas_stats_two(temp, "id","Baseline","6 months")
 ```{r, fig.dim=c(4,3)}
 temp<- temp %>% pivot_longer(
     cols = c(Baseline,`6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "SLICC"  # Nueva columna con los valores
+    names_to = "Event", 
+    values_to = "SLICC"  
   )
 
 ggplot(temp,aes(x=SLICC))+ geom_histogram(aes(y = ..density..),fill="grey", color="black") + geom_density(color="blue", size=0.7)
 ```
 
-<br>
 
-Las comparaciones entre los tiempos basal y 6 meses se realizarán con la Prueba de los signos (Sign Test).
 
 <br>
 
@@ -546,9 +507,6 @@ ggpaired(temp, x = "Event", y = "SLICC",id="id",
 continuas_stats(wide3t, "id", "anti_dsDNA_Baseline", "anti_dsDNA_3 months", "anti_dsDNA_6 months")
 ```
 
-<br>
-
-La distribución de esta variable, aunque es puramente continua, presenta un sesgo muy importante a la izquierda, por lo que el valor de la media y de la mediana difieren mucho. Creo que es mejor reportar la mediana y el IQR ya que son medidas de centralidad y dispersión más verosímiles. También utilizaremos Friedman + Holm.
 
 <br>
 
@@ -558,10 +516,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(anti_dsDNA_Baseline, `anti_dsDNA_3 months`, `anti_dsDNA_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "anti_dsDNA"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "anti_dsDNA" 
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+ 
   mutate(Event = case_when(
     Event == "anti_dsDNA_Baseline" ~ "Baseline",
     Event == "anti_dsDNA_3 months" ~ "3 months", 
@@ -585,9 +543,7 @@ friedmanmc(y=temp$anti_dsDNA, groups=temp$Event, blocks=temp$id)
 continuas_stats(wide3t, "id", "CRP_Baseline", "CRP_3 months", "CRP_6 months")
 ```
 
-<br>
 
-Ocurre lo mismo, sesgo a la izquierda. Reportaremos mediana y IQR y utilizaremos Friedman + Holm
 
 <br>
 
@@ -620,40 +576,27 @@ friedmanmc(y=temp$CRP, groups=temp$Event, blocks=temp$id)
 
 <br>
 
-Para las variables categóricas binarias se utilizará el Cochran’s Q Test y la prueba posthoc con McNemar's Chi-squared Test con la corrección de Bonferroni.
 
 ```{r}
-# Definir función para variables binarias de tipo factor en tres tiempos
+
 binarias_stats <- function(df, id_col, time_var1, time_var2, time_var3) {
   df %>%
-    # Seleccionar el ID y las 3 variables de tiempo
     select(!!id_col, !!time_var1, !!time_var2, !!time_var3) %>%
-    
-    # Filtrar filas completas (sin NA)
     filter(complete.cases(.)) %>%
-    
-    # Pivotar al formato largo para facilitar el cálculo
     pivot_longer(cols = c(!!sym(time_var1), !!sym(time_var2), !!sym(time_var3)),
                  names_to = "Time", values_to = "Category") %>%
-    
-    # Agrupar por tiempo y categoría para el cálculo de estadísticas
     group_by(Time, Category) %>%
     summarise(
-      N = n(),  # Número de observaciones por categoría
+      N = n(), 
       .groups = "drop_last"
     ) %>%
-    
-   # Calcular la proporción
+
     group_by(Time) %>%
     mutate(
-      FR = round(N / sum(N) * 100, 2)  # Proporción en porcentaje
+      FR = round(N / sum(N) * 100, 2)  
     ) %>%
     ungroup() %>%
-    
-    # Reorganizar el formato para tener los tiempos como columnas
     pivot_wider(names_from = Time, values_from = c(N, FR)) %>%
-    
-    # Ordenar las columnas y dejar nombres claros
     select(Category, starts_with("N"), starts_with("FR"))
 }
 
@@ -680,10 +623,9 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(DORIS_Baseline, `DORIS_3 months`, `DORIS_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "DORIS"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "DORIS"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
   mutate(Event = case_when(
     Event == "DORIS_Baseline" ~ "Baseline",
     Event == "DORIS_3 months" ~ "3 months", 
@@ -708,11 +650,11 @@ doris_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(doris_pct, aes(x = Event, y = count, fill = DORIS)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) +  
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4             
   ) +
   labs(x = "Event", y = "Count", fill = "DORIS") +
   theme_gray()
@@ -740,10 +682,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(LLDAS_Baseline, `LLDAS_3 months`, `LLDAS_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "LLDAS"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "LLDAS"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+
   mutate(Event = case_when(
     Event == "LLDAS_Baseline" ~ "Baseline",
     Event == "LLDAS_3 months" ~ "3 months", 
@@ -768,11 +710,11 @@ LLDAS_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(LLDAS_pct, aes(x = Event, y = count, fill = LLDAS)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) +  
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4              
   ) +
   labs(x = "Event", y = "Count", fill = "LLDAS") +
   theme_gray()
@@ -805,10 +747,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(Corticosteroids_Baseline, `Corticosteroids_3 months`, `Corticosteroids_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "Corticosteroids"  # Nueva columna con los valores
+    names_to = "Event", 
+    values_to = "Corticosteroids"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+ 
   mutate(Event = case_when(
     Event == "Corticosteroids_Baseline" ~ "Baseline",
     Event == "Corticosteroids_3 months" ~ "3 months", 
@@ -833,11 +775,11 @@ Corticosteroids_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(Corticosteroids_pct, aes(x = Event, y = count, fill = Corticosteroids)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) + 
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4             
   ) +
   labs(x = "Event", y = "Count", fill = "Corticosteroids") +
   theme_gray()
@@ -865,10 +807,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(Corticosteroids_dose_Baseline,`Corticosteroids_dose_3 months`,`Corticosteroids_dose_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "Corticosteroids_dose"  # Nueva columna con los valores
+    names_to = "Event", 
+    values_to = "Corticosteroids_dose"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+ 
   mutate(Event = case_when(
     Event == "Corticosteroids_dose_Baseline" ~ "Baseline",
     Event == "Corticosteroids_dose_3 months" ~ "3 months",
@@ -884,7 +826,7 @@ friedmanmc(y=temp$Corticosteroids_dose, groups=temp$Event, blocks=temp$id)
 
 <br>
 
-#### Número de FAMEsc tomados a la vez
+#### FAMEsc 
 
 <br>
 
@@ -900,10 +842,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(csDMARDs_Baseline,`csDMARDs_3 months`,`csDMARDs_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "csDMARDs"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "csDMARDs"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+ 
   mutate(Event = case_when(
     Event == "csDMARDs_Baseline" ~ "Baseline",
     Event == "csDMARDs_3 months" ~ "3 months",
@@ -948,10 +890,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(Flares_Baseline,`Flares_3 months`,`Flares_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "Flares"  # Nueva columna con los valores
+    names_to = "Event", 
+    values_to = "Flares"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+  
   mutate(Event = case_when(
     Event == "Flares_Baseline" ~ "Baseline",
     Event == "Flares_3 months" ~ "3 months",
@@ -993,10 +935,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(PRA_Baseline, `PRA_3 months`, `PRA_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "PRA"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "PRA"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+ 
   mutate(Event = case_when(
     Event == "PRA_Baseline" ~ "Baseline",
     Event == "PRA_3 months" ~ "3 months", 
@@ -1021,11 +963,11 @@ PRA_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(PRA_pct, aes(x = Event, y = count, fill = PRA)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) +  
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4              
   ) +
   labs(x = "Event", y = "Count", fill = "PRA") +
   theme_gray()
@@ -1054,10 +996,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(Response20_Baseline, `Response20_3 months`, `Response20_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "Response20"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "Response20"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+ 
   mutate(Event = case_when(
     Event == "Response20_Baseline" ~ "Baseline",
     Event == "Response20_3 months" ~ "3 months", 
@@ -1081,11 +1023,11 @@ Response20_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(Response20_pct, aes(x = Event, y = count, fill = Response20)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) +  
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4              
   ) +
   labs(x = "Event", y = "Count", fill = "Response 20%") +
   theme_gray()
@@ -1114,10 +1056,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(Response50_Baseline, `Response50_3 months`, `Response50_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "Response50"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "Response50"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+  
   mutate(Event = case_when(
     Event == "Response50_Baseline" ~ "Baseline",
     Event == "Response50_3 months" ~ "3 months", 
@@ -1141,11 +1083,11 @@ Response50_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(Response50_pct, aes(x = Event, y = count, fill = Response50)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) +  
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4              
   ) +
   labs(x = "Event", y = "Count", fill = "Response 50%") +
   theme_gray()
@@ -1172,10 +1114,10 @@ temp<- wide3t %>%
     filter(complete.cases(.))%>% 
   pivot_longer(
     cols = c(Serological_response_Baseline, `Serological_response_3 months`, `Serological_response_6 months`),
-    names_to = "Event",  # Nueva columna con los nombres originales
-    values_to = "Serological_response"  # Nueva columna con los valores
+    names_to = "Event",  
+    values_to = "Serological_response"  
   ) %>%
-  # Limpiar los nombres de los eventos para mayor consistencia
+  
   mutate(Event = case_when(
     Event == "Serological_response_Baseline" ~ "Baseline",
     Event == "Serological_response_3 months" ~ "3 months", 
@@ -1199,11 +1141,11 @@ Serological_response_pct <- temp %>%
   mutate(percentage = count / sum(count) * 100)
 
 ggplot(Serological_response_pct, aes(x = Event, y = count, fill = Serological_response)) +
-  geom_bar(stat = "identity", position = "stack",width=0.7) +  # Gráfico de barras apiladas
+  geom_bar(stat = "identity", position = "stack",width=0.7) +  
   geom_text(
     aes(label = paste0(round(percentage, 1), "%")),
-    position = position_stack(vjust = 0.5),  # Centra las etiquetas en las barras
-    color = "black", size = 4              # Ajusta el color y el tamaño del texto
+    position = position_stack(vjust = 0.5),  
+    color = "black", size = 4              
   ) +
   labs(x = "Event", y = "Count", fill = "Serological response") +
   theme_gray()
@@ -1239,11 +1181,8 @@ suspension<-data%>%
 
 ```{r}
 suspension_global<-suspension %>%
-  # Filtrar para eliminar filas donde Event sea "Baseline"
   filter(Event != "Baseline") %>%
-  # Agrupar por id
   group_by(id) %>%
-  # Crear nuevas columnas sumando valores de los tiempos 3 months y 6 months
   summarise(
     Discontinuation = sum(Discontinuation[Event %in% c("3 months", "6 months")], na.rm = TRUE),
     `Lack of efficacy` = sum(`Lack of efficacy`[Event %in% c("3 months", "6 months")], na.rm = TRUE),
@@ -1254,13 +1193,13 @@ suspension_global<-suspension %>%
 ```
 
 ```{r,fig.dim=c(6,6)}
-# Crear tabla resumida con las frecuencias y porcentajes
+
 discontinuation_summary <- suspension_global %>%
   mutate(Discontinuation = ifelse(Discontinuation == 1, "Yes", "No")) %>%
   count(Discontinuation) %>%
   mutate(Percentage = n / sum(n) * 100)
 
-# Crear el gráfico tipo quesito
+
 ggplot(discontinuation_summary, aes(x = "", y = n, fill = Discontinuation)) +
   geom_bar(stat = "identity", width = 1, color = "white") +
   coord_polar("y", start = 0) +
@@ -1284,13 +1223,13 @@ suspension_3m<-suspension %>%
 ```
 
 ```{r,fig.dim=c(6,6)}
-# Crear tabla resumida con las frecuencias y porcentajes
+
 discontinuation_summary <- suspension_3m %>%
   mutate(Discontinuation = ifelse(Discontinuation == 1, "Yes", "No")) %>%
   count(Discontinuation) %>%
   mutate(Percentage = n / sum(n) * 100)
 
-# Crear el gráfico tipo quesito
+
 ggplot(discontinuation_summary, aes(x = "", y = n, fill = Discontinuation)) +
   geom_bar(stat = "identity", width = 1, color = "white") +
   coord_polar("y", start = 0) +
@@ -1318,13 +1257,13 @@ suspension_6m<-suspension %>%
 ```
 
 ```{r,fig.dim=c(6,6)}
-# Crear tabla resumida con las frecuencias y porcentajes
+
 discontinuation_summary <- suspension_6m %>%
   mutate(Discontinuation = ifelse(Discontinuation == 1, "Yes", "No")) %>%
   count(Discontinuation) %>%
   mutate(Percentage = n / sum(n) * 100)
 
-# Crear el gráfico tipo quesito
+
 ggplot(discontinuation_summary, aes(x = "", y = n, fill = Discontinuation)) +
   geom_bar(stat = "identity", width = 1, color = "white") +
   coord_polar("y", start = 0) +
@@ -1347,7 +1286,7 @@ ggplot(discontinuation_summary, aes(x = "", y = n, fill = Discontinuation)) +
 
 ```{r,fig.dim=c(6,6)}
 
-# Filtrar los casos donde Discontinuation == 1
+
 reasons_summary <- suspension_global %>%
   filter(Discontinuation == 1) %>%
   summarise(
@@ -1360,7 +1299,7 @@ reasons_summary <- suspension_global %>%
   filter(Count > 0) %>%  # Eliminar categorías con Count == 0
   mutate(Percentage = Count / sum(Count) * 100) 
 
-# Crear el gráfico de las razones
+
 ggplot(reasons_summary, aes(x = "", y = Count, fill = Reason)) +
   geom_bar(stat = "identity", width = 1, color = "white") +
   coord_polar("y", start = 0) +
